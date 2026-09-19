@@ -160,4 +160,4 @@ Read [`AGENTS.md`](AGENTS.md) for repository guidance and the [Duris implementat
 
 Originally created by **[Arjinius / Arjin](https://github.com/Arjinius)**. Maintained here in **[Community-Duris/duris-client](https://github.com/Community-Duris/duris-client)**.
 
-[New Duris](https://www.newduris.com/) · [World map](https://www.newduris.com/wiki/map) · [Mudlet](https://www.mudlet.org/) · [Report an issue](https://github.com/Community-Duris/duris-client/issues)
+[New Duris](https://www.newduris.com/) · [World map](https://www.newduris.com/wiki/map) · [Mudlet](https://www.mudlet.org/)
