@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage />
+	<ActionPackage />
+	<ScriptPackage>
+		<ScriptGroup isActive="yes" isFolder="yes">
+			<name>Arjinius Client V1.0</name>
+			<packageName>Arjinius Client V1.0</packageName>
+			<script></script>
+			<eventHandlerList />
+			<ScriptGroup isActive="yes" isFolder="yes">
+				<name>ArJUI Core</name>
+				<packageName></packageName>
+				<script></script>
+				<eventHandlerList />
+				<Script isActive="yes" isFolder="no">
+					<name>ArjUI</name>
+					<packageName></packageName>
+					<script>@@SCRIPT:ArjUI@@</script>
+					<eventHandlerList />
+				</Script>
+				<Script isActive="yes" isFolder="no">
+					<name>ArjMapper</name>
+					<packageName></packageName>
+					<script>@@SCRIPT:ArjMapper@@</script>
+					<eventHandlerList />
+				</Script>
+			</ScriptGroup>
+		</ScriptGroup>
+	</ScriptPackage>
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>

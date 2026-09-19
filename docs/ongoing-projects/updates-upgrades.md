@@ -217,6 +217,20 @@ changed is data-driven from fields confirmed in the server source; the risk
 is in Geyser layout only. Import into Mudlet and run through
 `docs/MUDLET_SMOKE_TEST.md` sections that apply before release.
 
+## 3b. Source/assembly split (2026-09-20)
+
+The package is now built from `src/` by `build.py` instead of being edited in
+place. Motivation: the first round of changes above had to be regexed into the
+XML inside the zip by hand, with three separate gotchas (CRLF `config.lua`,
+`isActive="yes"` attribute form, XML escaping). The build handles all of them
+and was verified to reproduce the hand-assembled XML byte for byte (same CRC).
+
+- `VERSION` is the single version source; the build writes it into
+  `config.lua` and `ArjUI.VERSION`.
+- `python3 build.py --check` runs `luac -p` on both scripts.
+- The built `.mpackage` stays committed at the repo root so the install path
+  in the README keeps working.
+
 ## 4. Next candidates
 
 1. Ship radar panel (F13).

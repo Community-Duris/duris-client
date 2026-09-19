@@ -37,6 +37,19 @@ Original Author: https://github.com/Arjinius
 
 ---
 
+## Building from source
+
+The `.mpackage` is generated from `src/`. To rebuild after editing:
+
+```bash
+python3 build.py
+```
+
+This needs only Python 3. If `luac` is on your PATH the Lua is syntax-checked first.
+See `AGENTS.md` for the source layout.
+
+---
+
 ## Updates
 
 New versions are published via **GitHub Releases**.  
