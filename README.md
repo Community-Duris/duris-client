@@ -1,8 +1,10 @@
 # Arjinius Client
 
-A custom Mudlet client created for **New Duris**, focused on clarity, usability, and a cohesive dark fantasy aesthetic.
+A custom Mudlet client created for **Duris**, focused on clarity, usability, and a cohesive dark fantasy aesthetic.
 
 Arjinius Client replaces the default Mudlet layout with a structured, information-rich interface designed to improve moment-to-moment gameplay without automating or altering core mechanics.
+
+Author: https://github.com/Arjinius
 
 ---
 
