@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Assemble `Arjinius Client.mpackage` from the sources under src/.
+"""Assemble `duris-client.mpackage` from the sources under src/.
 
-    python3 build.py            # build to ./Arjinius Client.mpackage
+    python3 build.py            # build to ./duris-client.mpackage
     python3 build.py --check    # syntax-check the Lua only (needs luac)
     python3 build.py -o path    # build somewhere else
 
@@ -29,7 +29,8 @@ from xml.sax.saxutils import escape
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
-PACKAGE_NAME = "Arjinius Client"
+PACKAGE_NAME = "Arjinius Client"   # internal name: config.lua `mpackage` and the XML inside the zip
+OUTPUT_FILE = "duris-client.mpackage"  # file name on disk
 PLACEHOLDER = re.compile(r"@@SCRIPT:([A-Za-z0-9_]+)@@")
 
 
@@ -111,7 +112,7 @@ def asset_files():
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("-o", "--output", default=os.path.join(ROOT, f"{PACKAGE_NAME}.mpackage"))
+    ap.add_argument("-o", "--output", default=os.path.join(ROOT, OUTPUT_FILE))
     ap.add_argument("--check", action="store_true", help="only syntax-check the Lua")
     args = ap.parse_args()
 

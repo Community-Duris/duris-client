@@ -13,7 +13,7 @@ A **Mudlet client package** (UI only) for the MUD *New Duris*. Upstream: https:/
   - `src/assets/` — files copied into the zip verbatim (`NewDuris v1.png`, `.mudlet/Icon/ArjUI.jpeg`).
 - `VERSION` — the package version. The build writes it into `config.lua` and into `ArjUI.VERSION`.
 - `build.py` — assembles the package (stdlib Python only). `python3 build.py --check` only syntax-checks the Lua.
-- `Arjinius Client.mpackage` — **build output**, committed so users can download it. Never hand-edit it.
+- `duris-client.mpackage` — **build output**, committed so users can download it. Never hand-edit it.
 - `README.md` — user-facing install docs. `docs/` — reference material and the ongoing-projects log.
 
 ## Working on the package

@@ -16,7 +16,7 @@ Sources studied (all public, cloned read-only into a scratch dir on 2026-09-20):
   - `frontend/src/stores/mudStore.ts`, `components/mud/MudChatPanel.vue`,
     `MudAffects.vue`, `ShipRadar.vue`, `MudMap.vue`
 
-Package studied: `Arjinius Client.mpackage` v1 (two scripts: `ArjUI` 3084
+Package studied: `duris-client.mpackage` v1 (two scripts: `ArjUI` 3084
 lines, `ArjMapper` 1351 lines; no triggers/aliases/keys as XML items, all
 created at runtime with `tempTrigger`/`tempAlias`).
 
