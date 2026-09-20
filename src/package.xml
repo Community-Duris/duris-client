@@ -28,6 +28,12 @@
 					<script>@@SCRIPT:ArjMapper@@</script>
 					<eventHandlerList />
 				</Script>
+				<Script isActive="yes" isFolder="no">
+					<name>ArjAuto</name>
+					<packageName></packageName>
+					<script>@@SCRIPT:ArjAuto@@</script>
+					<eventHandlerList />
+				</Script>
 			</ScriptGroup>
 		</ScriptGroup>
 	</ScriptPackage>

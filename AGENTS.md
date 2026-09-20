@@ -7,7 +7,7 @@ A **Mudlet client package** for the MUD *New Duris*. Upstream: https://github.co
 
 ## Layout
 - `src/` — **the source of truth.**
-  - `src/scripts/ArjUI.lua`, `src/scripts/ArjMapper.lua` — the two Mudlet scripts (all UI + mapper Lua).
+  - `src/scripts/ArjUI.lua`, `src/scripts/ArjMapper.lua`, `src/scripts/ArjAuto.lua` — the three Mudlet scripts (UI, mapper, automation/aliases).
   - `src/package.xml` — Mudlet XML skeleton. Each `<script>` body is a `@@SCRIPT:<Name>@@` placeholder filled from `src/scripts/<Name>.lua`.
   - `src/config.lua` — package metadata; its `version` line is overwritten at build time.
   - `src/assets/` — files copied into the zip verbatim (`NewDuris v1.png`, `.mudlet/Icon/ArjUI.jpeg`).

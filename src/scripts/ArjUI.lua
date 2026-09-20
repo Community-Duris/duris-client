@@ -3,7 +3,7 @@
 -- Dark Fantasy Aesthetic
 
 ArjUI = ArjUI or {}
-ArjUI.VERSION = "1.2.1"
+ArjUI.VERSION = "1.3.0"
 ArjUI.eventHandlers = ArjUI.eventHandlers or {}
 ArjUI.playerName = ArjUI.playerName or nil
 ArjUI.captureTriggers = ArjUI.captureTriggers or {}
@@ -3440,17 +3440,19 @@ end
 
 function ArjUI:summarizeScan()
   self.scanTimer = nil
-  local parts, total = {}, 0
+  local parts, plain, total = {}, {}, 0
   for _, dir in ipairs(scanDirOrder) do
     local c = self.scanCounts[dir]
     if c then
       total = total + c.n
       table.insert(parts, string.format("<white>%s<dim_gray>:%d (nearest %d)", dir, c.n, c.nearest))
+      table.insert(plain, string.format("%s:%d (nearest %d)", dir, c.n, c.nearest))
     end
   end
   self.scanCounts = {}
   if total == 0 then return end
   self:note(string.format("<cyan>[Scan] <white>%d<dim_gray> seen · %s", total, table.concat(parts, " · ")))
+  if ArjAuto and ArjAuto.onScanSummary then pcall(function() ArjAuto:onScanSummary(total, plain) end) end
 end
 
 -- ------------------------------------------------------------
@@ -3708,6 +3710,7 @@ function ArjUI:showHelp()
   self:note("<white>ui damage<dim_gray>             session damage report; <white>ui damage reset<dim_gray> clears it")
   self:note("<white>ui set<dim_gray>                list toggles; <white>ui set <name> on|off<dim_gray> changes one")
   self:note("<white>mapper<dim_gray>                mapper help")
+  self:note("<white>auto<dim_gray>                  automation and utility aliases (ArjAuto)")
   self:note("<dim_gray>Numpad: 8/2/4/6 move, 7/9/1/3 diagonals, - up, + down, 5 look, / scan, 0 flee")
 end
 

@@ -46,6 +46,8 @@ The package is named **Arjinius Client** inside Mudlet. For updates, download th
 | **Chat that stays organized** | **ALL / TELLS / NCHAT / ROOM / GUILD / GROUP**, with timestamps, individual tell windows, contact history for the current session, and alignment-colored nchat/jchat senders. |
 | **Useful details nearby** | Inventory, equipment, who-list, and ship panels; context menus for common actions; in-game time; links to the world map and current zone's wiki page. |
 | **Text intelligence** | Aligned, color-coded `scan` output with a per-direction summary; `+exp` notices with a kills-to-level estimate; banners when sanctuary, rage, war cry, or stone skin drop, when you are disarmed or scryed, and when a skill improves. |
+| **Automation, off by default** | Auto-stand, auto-group on consent, auto-rescue for a list of names, auto-assist, re-rage, re-wield after disarm, auto-loot, bard song restart, follower traps, repeat timers, stat reroller, and ship hotkeys. Each has its own `auto <name> on` switch. |
+| **Utility aliases** | Container, corpse, door, potion, bash-by-race, flee-stab, rebash-after-lag, hold-and-use wands, one-line identify, group casting, loot split by bidscore, ship orders and dock runs. Type `auto` for the list. |
 | **Numpad movement** | 8/2/4/6 move, 7/9/1/3 diagonals, `-` up, `+` down, 5 look, `/` scan, 0 flee. Turn off with `ui set keypad off`. |
 
 Guild `gcc` messages route to **GUILD**, group `gsay` to **GROUP**, and `jchat` to **NCHAT**. `petition` and `wizmsg` appear in **ALL** with distinct colors. Tell windows and their history are session-only.
@@ -62,6 +64,7 @@ Type these into the Mudlet command input:
 | `ui debug` | Show which core GMCP data tables have arrived. |
 | `ui damage` | Session damage report (total, hits, damage per second, current fight). `ui damage reset` clears it. Clicking the **DMG** counter in the target panel shows the same report. |
 | `ui set` | List the toggles below. `ui set <name> on` or `off` changes one and remembers it. |
+| `auto` | ArjAuto help: automation toggles (`auto set`, `auto <name> on|off`), variables (`vars`), and the utility aliases. |
 | `mapper` | Show mapper help. |
 | `mapper on` / `mapper off` | Enable or pause mapper updates. |
 | `mapper status` | Show the current map mode, room, zone, and cache statistics. |
@@ -76,7 +79,7 @@ Use the map's **+ / −** controls to zoom. Click the active **STATS**, **INV**,
 
 ## How it works
 
-Two Lua scripts run inside Mudlet. **ArjUI** builds the Geyser interface and processes live game information. **ArjMapper** uses the map area provided by ArjUI, combining room data with downloaded zone layouts or the server's wilderness map.
+Three Lua scripts run inside Mudlet. **ArjUI** builds the Geyser interface and processes live game information. **ArjMapper** uses the map area provided by ArjUI, combining room data with downloaded zone layouts or the server's wilderness map. **ArjAuto** holds the automation toggles and utility aliases; it reads ArjUI's live state (combat, position, group, ship) to decide when to act.
 
 ```mermaid
 flowchart TB
@@ -148,6 +151,7 @@ python3 build.py -o /tmp/duris-client.mpackage
 | --- | --- |
 | [`src/scripts/ArjUI.lua`](src/scripts/ArjUI.lua) | UI construction, GMCP handlers, text capture, chat, and commands. |
 | [`src/scripts/ArjMapper.lua`](src/scripts/ArjMapper.lua) | Zone layout downloads, caching, wilderness rendering, and map controls. |
+| [`src/scripts/ArjAuto.lua`](src/scripts/ArjAuto.lua) | Automation toggles, variables, utility aliases, ship hotkeys, loot split. Settings persist in `arjauto.json`. |
 | [`src/package.xml`](src/package.xml) | Mudlet XML skeleton with `@@SCRIPT:Name@@` placeholders. |
 | [`src/config.lua`](src/config.lua) | Package metadata. The build injects its version. |
 | [`src/assets/`](src/assets/) | Images copied into the package unchanged. |

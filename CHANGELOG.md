@@ -2,6 +2,26 @@
 
 Notable changes to the Duris Client Mudlet package. Versions follow [Semantic Versioning](https://semver.org) (`MAJOR.MINOR.PATCH`); see [docs/RELEASING.md](docs/RELEASING.md) for what each part means here. Each version heading must match `VERSION`; the release workflow copies that section into the GitHub Release notes.
 
+## 1.3.0 - 2026-09-20
+
+New **ArjAuto** script: the automation and utility side of the "lielz scripts" archive, reworked so nothing is hardcoded to one character. Every automatic behaviour is off until `auto <name> on`; toggles, variables, the rescue list, bidscores and login commands persist in `arjauto.json`. Type `auto` for help.
+
+- **Toggles**: autoStand, autoGroup, autoRescue, autoAssist, autoRage, autoWield, autoLoot, autoOre, autoFollow, autoPlay, trapKill, scanReport, eventReport, shipKeys, roller.
+- **Variables** (`vars`): target, container, food, weapon, held, door, tank, song, cargo, contra, idscroll, spam, report channel, intervals, roll threshold.
+- **Rescue list**: `rescue add|del|group|list|clear`; rescue lag handled with the archive's response lines plus a safety timeout.
+- **Combat**: `kt`, `bsh`, `bsht`, bash-by-race shortcuts, `rbsh`/`rbsht`/`bof` rebash after the 14 s bash lag, `fls` flee-stab, `bac` backstab, `uw <item> [target]` hold-and-use.
+- **Containers and corpses**: `pcb gcb pab gab lib pi gi grep rrep eat qf rq`, `lc lcb lic dc nlc slc elc wlc`.
+- **Movement**: door helpers with the `dd` variable, `ep egh emw ewh enl env`, `sw <dirs>`, `lall`, `sfle`, `fc`, `of`, `rm`.
+- **Group**: `castall <spell>`, `vitall`, `virtueall`, `weakest`.
+- **Timers**: `spam <cmd>` with `spamon`/`spamoff`, `scan timer on|off`; both only fire while idle and standing.
+- **Ship**: `oh os fff ffp ffs ffr ffall`, orders relative to the locked contact (`otf otp ots otr oth otsp`), `jet disem`, farsee `le ln lne lnw ls lse lsw lw`, `ship poll on|off`, `lout on|off`, `shipf/shipn`, `qkcargo`, `qkreload`, Ctrl and Ctrl+Shift hotkeys behind `auto shipKeys on`.
+- **Loot split**: `split start|roll|free|scores|set|flush` with persisted bidscores and multi-die rolls.
+- **Identify**: `id <item>` recites your `idscroll` and compacts the readout to one line.
+- **Epic zones**: `epic report` lists zones seen completed this boot.
+- **Login commands**: `login add|list|clear` sent when you enter the game.
+- **Plane direction notes**: `dirs eth|astral|air|fire|water|neg`.
+- ArjUI's scan summary hands off to ArjAuto for channel reporting; `ui help` mentions `auto`.
+
 ## 1.2.1 - 2026-09-20
 
 - Removed the "client-side UI only, no automation" scope statements from the package description, README, and contributor guide. No code changes.
