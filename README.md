@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="VERSION"><img src="https://img.shields.io/badge/package-v1.1-d4a855?style=for-the-badge&amp;labelColor=16140f" alt="Package version 1.1"></a>
+  <a href="https://github.com/Community-Duris/duris-client/releases/latest"><img src="https://img.shields.io/github/v/release/Community-Duris/duris-client?style=for-the-badge&amp;color=d4a855&amp;labelColor=16140f&amp;label=release" alt="Latest release"></a>
   <a href="https://www.mudlet.org/download/"><img src="https://img.shields.io/badge/Mudlet-4.19.1%2B-8c6e46?style=for-the-badge&amp;labelColor=16140f" alt="Requires Mudlet 4.19.1 or newer"></a>
   <a href="src/scripts/"><img src="https://img.shields.io/badge/code-Lua-7090c0?style=for-the-badge&amp;labelColor=16140f&amp;logo=lua&amp;logoColor=white" alt="Written in Lua"></a>
   <a href="src/scripts/ArjUI.lua"><img src="https://img.shields.io/badge/UI-Geyser-b89970?style=for-the-badge&amp;labelColor=16140f" alt="Built with Geyser"></a>
@@ -12,7 +12,7 @@
   <a href="#new-duris--arjinius-client"><img src="https://img.shields.io/badge/scope-client_UI-8c6e46?style=for-the-badge&amp;labelColor=16140f" alt="Client-side UI package"></a>
   <a href="#install"><img src="https://img.shields.io/badge/GMCP-required-70b0c0?style=for-the-badge&amp;labelColor=16140f" alt="GMCP required"></a>
   <a href="#build-and-contribute"><img src="https://img.shields.io/badge/build-Python_3-7090c0?style=for-the-badge&amp;labelColor=16140f&amp;logo=python&amp;logoColor=white" alt="Build with Python 3"></a>
-  <a href="duris-client.mpackage?raw=true"><img src="https://img.shields.io/badge/download-.mpackage-d4a855?style=for-the-badge&amp;labelColor=16140f" alt="Download the Mudlet package"></a>
+  <a href="https://github.com/Community-Duris/duris-client/releases/latest/download/duris-client.mpackage"><img src="https://img.shields.io/badge/download-.mpackage-d4a855?style=for-the-badge&amp;labelColor=16140f" alt="Download the Mudlet package"></a>
 </p>
 
 # New Duris · Arjinius Client
@@ -29,12 +29,12 @@ This is a **client-side UI package**. Clickable controls send game commands you 
 
 You need **Mudlet 4.19.1 or newer**, a New Duris profile, and **GMCP enabled** in both the Mudlet profile and the game. Zone maps also need access to `www.newduris.com` over HTTPS.
 
-1. **[Download duris-client.mpackage](duris-client.mpackage?raw=true)** from this repository. The package version is recorded in [`VERSION`](VERSION); you do not need to build it yourself.
+1. **[Download duris-client.mpackage](https://github.com/Community-Duris/duris-client/releases/latest/download/duris-client.mpackage)** from the [latest release](https://github.com/Community-Duris/duris-client/releases/latest). Each release lists its changes and a SHA-256 checksum; you do not need to build it yourself.
 2. Open your New Duris profile in Mudlet.
 3. Open **Package Manager** (`Alt+O`), choose **Install New Package**, and select the downloaded `.mpackage`. See the [Mudlet Package Manager guide](https://wiki.mudlet.org/w/Manual:Package_Manager) for details.
 4. Reconnect and enter the game so fresh character and room data can populate the interface.
 
-The package is named **Arjinius Client** inside Mudlet. For updates, download the current `.mpackage` from this repository again, replace your installed copy through Package Manager, and reconnect.
+The package is named **Arjinius Client** inside Mudlet. For updates, download the `.mpackage` from the [latest release](https://github.com/Community-Duris/duris-client/releases/latest), replace your installed copy through Package Manager, and reconnect. See [`CHANGELOG.md`](CHANGELOG.md) for what changed.
 
 ## Features
 
@@ -148,7 +148,9 @@ python3 build.py -o /tmp/duris-client.mpackage
 | [`src/assets/`](src/assets/) | Images copied into the package unchanged. |
 | [`VERSION`](VERSION) | Version source for packaged metadata and `ArjUI.VERSION`. |
 | [`build.py`](build.py) | Injects Lua and version values, escapes script text, validates XML, and writes the package archive. |
-| [`duris-client.mpackage`](duris-client.mpackage) | Committed build output for players to download. |
+| [`duris-client.mpackage`](duris-client.mpackage) | Committed build output; releases attach a copy built from the tag. |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release notes per version; the release workflow reads it. |
+| [`.github/workflows/`](.github/workflows/) | CI build on every push; tag `v*` publishes a GitHub Release. See [`docs/RELEASING.md`](docs/RELEASING.md). |
 
 When changing the package, bump `VERSION`, rebuild, and include the generated `.mpackage` with the source change. Let the build insert version strings; do not hand-edit the archive. Keep contributions within the client UI scope, use Mudlet/Geyser APIs without external Lua dependencies, and preserve the dark fantasy style and percentage-based layout.
 

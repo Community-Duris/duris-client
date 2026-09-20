@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    name: Syntax-check and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install luac (Lua 5.1, matching Mudlet)
+        run: sudo apt-get update -q && sudo apt-get install -y -q lua5.1
+
+      - name: Lua syntax check
+        run: python3 build.py --check
+
+      - name: Build package
+        run: python3 build.py -o build/duris-client.mpackage
+
+      - name: Verify archive layout
+        run: |
+          set -e
+          unzip -l build/duris-client.mpackage
+          unzip -p build/duris-client.mpackage config.lua | grep -Fx "version = [[$(cat VERSION)]]"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: duris-client-${{ github.sha }}
+          path: build/duris-client.mpackage
