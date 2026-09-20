@@ -1,9 +1,9 @@
--- ArjUI Core v1.1 (Mudlet 4.19.1)
+-- ArjUI Core v1.2 (Mudlet 4.19.1)
 -- GMCP-based UI for Duris MUD
 -- Dark Fantasy Aesthetic
 
 ArjUI = ArjUI or {}
-ArjUI.VERSION = "1.1.0"
+ArjUI.VERSION = "1.2.0"
 ArjUI.eventHandlers = ArjUI.eventHandlers or {}
 ArjUI.playerName = ArjUI.playerName or nil
 ArjUI.captureTriggers = ArjUI.captureTriggers or {}
@@ -36,6 +36,7 @@ function ArjUI:kill()
   self.captureTriggers = {}
   self.capturing = nil
   self.captureBuffer = {}
+  if self.teardownPorted then self:teardownPorted() end
   -- Kill routeall trigger
   if self.routeAllTriggerId then
     pcall(function() killTrigger(self.routeAllTriggerId) end)
@@ -528,9 +529,9 @@ function ArjUI:init()
   self.tabPanels = {}
   self.activeTab = "group"
   
-  local tabNames = { "group", "stats", "inv", "eq", "who" }
-  local tabLabels = { "GROUP", "STATS", "INV", "EQ", "WHO" }
-  local tabW = 19  -- percentage width per tab
+  local tabNames = { "group", "stats", "inv", "eq", "who", "ship" }
+  local tabLabels = { "GROUP", "STATS", "INV", "EQ", "WHO", "SHIP" }
+  local tabW = 16  -- percentage width per tab
   
   for i, tabName in ipairs(tabNames) do
     local xPos = string.format("%d%%", 2 + (i-1) * tabW)
@@ -570,6 +571,11 @@ function ArjUI:init()
   self.whoBox = makeConsole(self.tabContent, "ArjUI_WhoBox", 0, 0, "100%", "100%", 9, 60)
   self.whoBox:hide()
   self.tabPanels.who = self.whoBox
+  
+  -- SHIP panel (GMCP Ship.Info/Ship.Contacts, or 'look contacts' text)
+  self.shipBox = makeConsole(self.tabContent, "ArjUI_ShipBox", 0, 0, "100%", "100%", 9, 60)
+  self.shipBox:hide()
+  self.tabPanels.ship = self.shipBox
   
   self:updateTabStyles()
 
@@ -775,9 +781,17 @@ function ArjUI:init()
   self.targetHpGauge.text:setStyleSheet("color: #d0d0d0; font-size: 10px; font-weight: bold;")
   
   -- Debuffs section under target
-  self.debuffsHeader = Geyser.Label:new({ name="ArjUI_DebuffsHeader", x="3%", y="38%", width="94%", height="12%" }, self.targetWrap)
+  self.debuffsHeader = Geyser.Label:new({ name="ArjUI_DebuffsHeader", x="3%", y="38%", width="62%", height="12%" }, self.targetWrap)
   styleSafe(self.debuffsHeader, self.styles.headerCombat)
   labelSet(self.debuffsHeader, "☠ DEBUFFS")
+  
+  -- Damage counter for the current fight (see setupDamageTracker)
+  self.damageLabel = Geyser.Label:new({ name="ArjUI_DamageLabel", x="66%", y="38%", width="31%", height="12%" }, self.targetWrap)
+  styleSafe(self.damageLabel, self.styles.headerTarget)
+  labelSet(self.damageLabel, "⚔ DMG")
+  self.damageLabel:setClickCallback(function() self:reportDamage(false) end)
+  self.damageLabel:setOnEnter(function() self.damageLabel:setCursor("PointingHand") end)
+  self.damageLabel:setOnLeave(function() self.damageLabel:setCursor("Arrow") end)
   self.debuffsBox = makeConsole(self.targetWrap, "ArjUI_DebuffsBox", "3%", "51%", "94%", "46%", 8, 40)
 
   -- STATE
@@ -819,7 +833,9 @@ function ArjUI:init()
   self:layout()
 
   self:loadCustomCommands()
+  self:loadSettings()
   self:registerGMCPHandlers()
+  self:setupPorted()
   self:renderAll()
   
   -- If GMCP data already exists (reconnecting to existing session), render again after short delay
@@ -1622,6 +1638,11 @@ function ArjUI:registerGMCPHandlers()
   table.insert(self.eventHandlers, h)
   h = registerAnonymousEventHandler("gmcp.Char.Affects", function() self:onCharAffects() end)
   table.insert(self.eventHandlers, h)
+  -- Ship.Info / Ship.Contacts: periodic while on a ship bridge
+  h = registerAnonymousEventHandler("gmcp.Ship.Info", function() self:onShipInfo() end)
+  table.insert(self.eventHandlers, h)
+  h = registerAnonymousEventHandler("gmcp.Ship.Contacts", function() self:onShipContacts() end)
+  table.insert(self.eventHandlers, h)
   
   -- Char.Status: sent once on character entry and on level change (self only)
   h = registerAnonymousEventHandler("gmcp.Char.Status", function() self:onCharStatus() end)
@@ -1905,6 +1926,8 @@ function ArjUI:onCharVitals()
     elseif newTnl > self.state.tnl then self.state.tnlBaseline = newTnl end
     self.state.tnl = newTnl
   end
+  local newExp = toNum(pick(v, "exp", "experience"))
+  if newExp and self.trackExp then self:trackExp(newExp, newTnl) end
   if v.position then self.state.position = v.position end
   if v.usesMana ~= nil then self.state.usesMana = (v.usesMana == true) end
   self.state.fighting = (type(v.fighting) == "string" and v.fighting ~= "") and v.fighting or nil
@@ -1952,6 +1975,15 @@ end
 function ArjUI:onCombatUpdate()
   if not gmcp or not gmcp.Combat or not gmcp.Combat.Update then return end
   local c = gmcp.Combat.Update
+  
+  -- Per-round damage dealt by us (Combat.Update.round {attacker, damage, damageType, critical})
+  if type(c.round) == "table" and c.round.damage and self.addDamage then
+    local atk = tostring(c.round.attacker or ""):lower()
+    local me = (self.playerName or ""):lower()
+    if atk == "you" or (me ~= "" and atk == me) then
+      self:addDamage(toNum(c.round.damage), "gmcp")
+    end
+  end
   
   -- Handle tank info if provided (rescue, swap, flee changes)
   if c.tank then
@@ -2097,7 +2129,12 @@ function ArjUI:onCommChannel()
     local ac = alignColors[tostring(c.alignment):lower()]
     if ac then senderColored = ac .. sender .. color end
   end
-  local formatted = string.format("%s[%s] %s<reset>: %s\n", color, channel, senderColored, text)
+  local stamp = ""
+  if self.settings and self.settings.chatTimestamps then
+    local ok, t = pcall(getTime, true, "hh:mm")
+    if ok and t then stamp = "<dim_gray>" .. t .. " " end
+  end
+  local formatted = string.format("%s%s[%s] %s<reset>: %s\n", stamp, color, channel, senderColored, text)
   
   -- Always send to ALL tab
   self.chatBox:cecho(formatted)
@@ -2167,10 +2204,12 @@ end
 
 function ArjUI:renderTNLBar()
   local tnl, base = self.state.tnl, self.state.tnlBaseline
+  local last = self.state.lastExpGain
+  local suffix = last and string.format("   (last +%d)", last) or ""
   if tnl and tnl > 0 and base and base > 0 then
-    self.xpGauge:setValue(math.max(0, base - tnl), base, string.format("TNL: %d", tnl))
+    self.xpGauge:setValue(math.max(0, base - tnl), base, string.format("TNL: %d%s", tnl, suffix))
   elseif tnl and tnl > 0 then
-    self.xpGauge:setValue(0, 100, string.format("TNL: %d", tnl))
+    self.xpGauge:setValue(0, 100, string.format("TNL: %d%s", tnl, suffix))
   else
     self.xpGauge:setValue(0, 100, "TNL")
   end
@@ -2571,6 +2610,18 @@ function ArjUI:renderGroup()
   local yOffsetPct = 10  -- Start at 10% from top
   local rowHeightPct = math.min(15, 85 / math.max(#members, 1))  -- Dynamic row height based on member count
   
+  -- Find the most hurt player (not NPC, in room) so their name can be highlighted
+  local weakestIdx, weakestPct = nil, 100
+  for i, mem in ipairs(members) do
+    local hp = toNum(pick(mem, "hp", "health", "hitpoints"))
+    local maxHp = toNum(pick(mem, "maxHp", "maxhp", "max_health", "hpmax"))
+    if hp and maxHp and maxHp > 0 and mem.isNpc ~= true and mem.inRoom ~= false then
+      local p = math.floor((hp / maxHp) * 100)
+      if p < weakestPct then weakestIdx, weakestPct = i, p end
+    end
+  end
+  if weakestPct >= 100 then weakestIdx = nil end
+  
   for i, mem in ipairs(members) do
     local name = mem.name or "Unknown"
     local displayName = normalizeTargetName(name)
@@ -2594,6 +2645,9 @@ function ArjUI:renderGroup()
     local isAlert = posUpper ~= "STA" and posUpper ~= ""
     local inRoom = (mem.inRoom ~= false)  -- Group.Status.members[].inRoom
     if mem.isNpc == true then displayName = displayName .. "*" end
+    local mv = toNum(pick(mem, "move", "mv"))
+    local maxMv = toNum(pick(mem, "maxMove", "maxmove", "maxMv"))
+    local mvPct = (mv and maxMv and maxMv > 0) and math.floor((mv / maxMv) * 100) or nil
     
     -- Container for this member (percentage-based positioning)
     local memContainer = Geyser.Container:new({ 
@@ -2603,8 +2657,11 @@ function ArjUI:renderGroup()
     }, self.groupContainer)
     
     -- Name label (left)
-    local nameLabel = Geyser.Label:new({ name = "ArjUI_GroupName_" .. i, x = 0, y = 0, width = "70%", height = "45%" }, memContainer)
-    nameLabel:setStyleSheet(inRoom and nameStyle or nameStyle:gsub("#d0d0d0", "#707070"))
+    local nameLabel = Geyser.Label:new({ name = "ArjUI_GroupName_" .. i, x = 0, y = 0, width = "52%", height = "45%" }, memContainer)
+    local thisNameStyle = nameStyle
+    if not inRoom then thisNameStyle = nameStyle:gsub("#d0d0d0", "#707070")
+    elseif i == weakestIdx then thisNameStyle = nameStyle:gsub("#d0d0d0", "#ff8080") end
+    nameLabel:setStyleSheet(thisNameStyle)
     nameLabel:echo(displayName:sub(1, 14))
     nameLabel:setClickCallback(function()
       self:showContextMenu(self:getContextMenuItems("players", name))
@@ -2612,8 +2669,19 @@ function ArjUI:renderGroup()
     nameLabel:setOnEnter(function() nameLabel:setCursor("PointingHand") end)
     nameLabel:setOnLeave(function() nameLabel:setCursor("Arrow") end)
     
+    -- Moves (middle) - coloured by how spent they are
+    local mvLabel = Geyser.Label:new({ name = "ArjUI_GroupMv_" .. i, x = "52%", y = 0, width = "20%", height = "45%" }, memContainer)
+    if mvPct then
+      local mvColor = mvPct < 33 and "#ff6060" or (mvPct < 70 and "#d4a855" or "#60a080")
+      mvLabel:setStyleSheet((posStyle:gsub("#888888", mvColor)))
+      mvLabel:echo(mvPct .. "mv")
+    else
+      mvLabel:setStyleSheet(posStyle)
+      mvLabel:echo("")
+    end
+    
     -- Position label (right)
-    local posLabel = Geyser.Label:new({ name = "ArjUI_GroupPos_" .. i, x = "70%", y = 0, width = "30%", height = "45%" }, memContainer)
+    local posLabel = Geyser.Label:new({ name = "ArjUI_GroupPos_" .. i, x = "72%", y = 0, width = "28%", height = "45%" }, memContainer)
     posLabel:setStyleSheet(isAlert and posAlertStyle or posStyle)
     posLabel:echo(inRoom and ("[" .. posUpper .. "]") or "[AWAY]")
     
@@ -2622,12 +2690,21 @@ function ArjUI:renderGroup()
     hpGauge.front:setStyleSheet(self:getGroupHpStyle(hpPct))
     hpGauge.back:setStyleSheet(gaugeBack)
     hpGauge.text:setStyleSheet(gaugeText)
-    local hpText = cond ~= "" and string.format("%d%% %s", hpPct, cond) or string.format("HP %d%%", hpPct)
+    local hpText
+    if hp and maxHp and maxHp > 0 then
+      local missing = maxHp - hp
+      hpText = missing > 0 and string.format("%d/%d  -%d", hp, maxHp, missing) or string.format("%d/%d", hp, maxHp)
+    elseif cond ~= "" then
+      hpText = string.format("%d%% %s", hpPct, cond)
+    else
+      hpText = string.format("HP %d%%", hpPct)
+    end
     hpGauge:setValue(hpPct, 100, hpText)
     
     self.groupWidgets[i] = { 
       container = memContainer, 
       nameLabel = nameLabel, 
+      mvLabel = mvLabel,
       posLabel = posLabel,
       hpGauge = hpGauge
     }
@@ -2665,6 +2742,7 @@ function ArjUI:switchTab(tabName)
   elseif tabName == "inv" then hasData = self.state.invRaw and #self.state.invRaw > 0
   elseif tabName == "eq" then hasData = self.state.eqRaw and #self.state.eqRaw > 0
   elseif tabName == "group" then hasData = true  -- Group always has data from GMCP
+  elseif tabName == "ship" then hasData = self.state.ship and (self.state.ship.contacts or self.state.ship.textContacts) and true or false
   end
   
   if not hasData then
@@ -2727,6 +2805,8 @@ function ArjUI:renderActiveTab()
     self:renderEq()
   elseif self.activeTab == "who" then
     self:renderWho()
+  elseif self.activeTab == "ship" then
+    self:renderShip()
   end
 end
 
@@ -3103,6 +3183,544 @@ function ArjUI:requestTabData(tabName)
     send("inv")
   elseif tabName == "eq" then
     send("eq")
+  elseif tabName == "ship" then
+    send("look contacts")
+  end
+end
+
+-- ============================================================
+-- SETTINGS (persisted to arjui_settings.json)
+-- ============================================================
+
+ArjUI.settingsDefaults = {
+  keypad = true,          -- numpad movement keys
+  chatTimestamps = true,  -- [hh:mm] prefix on chat lines
+  damageTracker = true,   -- per-fight / session damage tracking
+  scanFormat = true,      -- rewrite 'scan' output into aligned columns
+  alerts = true,          -- console banners for notable events
+  expTracker = true,      -- '+exp' notices with kills-to-level estimate
+}
+
+function ArjUI:loadSettings()
+  self.settings = {}
+  for k, v in pairs(self.settingsDefaults) do self.settings[k] = v end
+  local path = getMudletHomeDir() .. "/arjui_settings.json"
+  local f = io.open(path, "r")
+  if f then
+    local content = f:read("*a")
+    f:close()
+    local ok, data = pcall(yajl.to_value, content)
+    if ok and type(data) == "table" then
+      for k, v in pairs(data) do
+        if self.settingsDefaults[k] ~= nil then self.settings[k] = (v == true) end
+      end
+    end
+  end
+end
+
+function ArjUI:saveSettings()
+  local path = getMudletHomeDir() .. "/arjui_settings.json"
+  local ok, json = pcall(yajl.to_string, self.settings or self.settingsDefaults)
+  if ok then
+    local f = io.open(path, "w")
+    if f then f:write(json); f:close() end
+  end
+end
+
+function ArjUI:setSetting(key, on)
+  if self.settingsDefaults[key] == nil then return false end
+  self.settings[key] = on
+  self:saveSettings()
+  if key == "keypad" then self:setupKeypad() end
+  return true
+end
+
+local function fmtNum(n)
+  n = math.floor(tonumber(n) or 0)
+  local s = tostring(n)
+  local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+  return (out:gsub("^,", ""))
+end
+
+local function fmtDuration(seconds)
+  seconds = math.max(0, math.floor(seconds or 0))
+  local h = math.floor(seconds / 3600)
+  local m = math.floor((seconds % 3600) / 60)
+  local s = seconds % 60
+  if h > 0 then return string.format("%dh%02dm%02ds", h, m, s) end
+  if m > 0 then return string.format("%dm%02ds", m, s) end
+  return string.format("%ds", s)
+end
+
+function ArjUI:note(text)
+  if self.console then self.console:cecho(text .. "<reset>\n") else cecho(text .. "<reset>\n") end
+end
+
+-- ============================================================
+-- PORTED INTELLIGENCE
+-- Display-only helpers adapted from the community "lielz scripts"
+-- collection (2015-2024). Nothing here sends game commands on its own
+-- except the numpad keys, which only fire when the player presses them.
+-- ============================================================
+
+function ArjUI:teardownPorted()
+  for _, id in ipairs(self.portTriggers or {}) do pcall(function() killTrigger(id) end) end
+  self.portTriggers = {}
+  for _, id in ipairs(self.portKeys or {}) do pcall(function() killKey(id) end) end
+  self.portKeys = {}
+  if self.scanTimer then pcall(function() killTimer(self.scanTimer) end); self.scanTimer = nil end
+end
+
+function ArjUI:setupPorted()
+  self:teardownPorted()
+  self.portTriggers = {}
+  self.portKeys = {}
+  self:setupExpTracker()
+  self:setupDamageTracker()
+  self:setupScanFormatter()
+  self:setupAlerts()
+  self:setupShipText()
+  self:setupKeypad()
+end
+
+local function addTrigger(self, pattern, fn)
+  local id = tempRegexTrigger(pattern, fn)
+  table.insert(self.portTriggers, id)
+  return id
+end
+
+-- ------------------------------------------------------------
+-- EXPERIENCE TRACKER (GMCP Char.Vitals exp/tnl)
+-- ------------------------------------------------------------
+
+function ArjUI:setupExpTracker()
+  self.state.exp = nil
+  self.state.lastExpGain = nil
+  self.state.sessionExp = 0
+end
+
+function ArjUI:trackExp(exp, tnl)
+  local prev = self.state.exp
+  self.state.exp = exp
+  if not prev then return end
+  local gained = exp - prev
+  if gained <= 0 then return end
+  self.state.lastExpGain = gained
+  self.state.sessionExp = (self.state.sessionExp or 0) + gained
+  if not (self.settings and self.settings.expTracker) then return end
+  local msg = string.format("<gold>[+%s exp]", fmtNum(gained))
+  if tnl and tnl > 0 then
+    local more = math.ceil(tnl / gained)
+    msg = msg .. string.format(" <dim_gray>%s to level, about %d more like that", fmtNum(tnl), more)
+  end
+  self:note(msg)
+end
+
+-- ------------------------------------------------------------
+-- DAMAGE TRACKER
+-- Sources: GMCP Combat.Update.round (preferred) or the server's
+-- "[Damage: N ]" display lines. Whichever arrives first wins so a hit
+-- is never counted twice.
+-- ------------------------------------------------------------
+
+function ArjUI:setupDamageTracker()
+  self.damage = self.damage or {
+    fight = 0, fightHits = 0,
+    session = 0, sessionHits = 0, sessionStart = os.time(),
+    lastHit = 0, source = nil,
+  }
+  addTrigger(self, "\\[Damage:\\s*(\\d+)\\s*\\]", function()
+    if ArjUI.damage.source == "gmcp" then return end
+    for n in string.gmatch(line or "", "%[Damage:%s*(%d+)%s*%]") do
+      ArjUI:addDamage(tonumber(n), "text")
+    end
+  end)
+  addTrigger(self, "^You receive your share of experience\\.$", function() ArjUI:endFight() end)
+  addTrigger(self, "^.+ is dead! R\\.I\\.P\\.$", function() ArjUI:endFight() end)
+  self:renderDamage()
+end
+
+function ArjUI:addDamage(n, source)
+  if not n or n <= 0 then return end
+  if not (self.settings and self.settings.damageTracker) then return end
+  local d = self.damage
+  if source == "gmcp" then d.source = "gmcp" elseif d.source == "gmcp" then return end
+  d.fight = d.fight + n
+  d.fightHits = d.fightHits + 1
+  d.session = d.session + n
+  d.sessionHits = d.sessionHits + 1
+  d.lastHit = n
+  if n > (d.lastBest or 0) then d.lastBest = n end
+  self:renderDamage()
+end
+
+function ArjUI:endFight()
+  local d = self.damage
+  if not d or d.fight <= 0 then return end
+  if self.settings and self.settings.damageTracker then
+    self:note(string.format("<gold>[Fight damage: %s in %d hits, best %s]", fmtNum(d.fight), d.fightHits, fmtNum(d.lastBest or 0)))
+  end
+  d.fight, d.fightHits, d.lastBest = 0, 0, 0
+  self:renderDamage()
+end
+
+function ArjUI:renderDamage()
+  if not self.damageLabel then return end
+  local d = self.damage or { fight = 0 }
+  if d.fight > 0 then
+    self.damageLabel:echo(string.format("<center>⚔ %s</center>", fmtNum(d.fight)))
+  else
+    self.damageLabel:echo("<center>⚔ DMG</center>")
+  end
+end
+
+function ArjUI:reportDamage(reset)
+  local d = self.damage
+  if reset then
+    self.damage = { fight = 0, fightHits = 0, session = 0, sessionHits = 0, sessionStart = os.time(), lastHit = 0, source = d and d.source or nil }
+    self:renderDamage()
+    self:note("<cyan>[ArjUI] Damage counters reset.")
+    return
+  end
+  local elapsed = os.time() - (d.sessionStart or os.time())
+  local dps = elapsed > 0 and d.session / elapsed or 0
+  self:note(string.format("<gold>[Damage] <white>%s<dim_gray> total in %s (%d hits, %.1f dmg/s). Current fight: <white>%s<dim_gray>. Source: %s",
+    fmtNum(d.session), fmtDuration(elapsed), d.sessionHits, dps, fmtNum(d.fight), d.source or "none yet"))
+end
+
+-- ------------------------------------------------------------
+-- SCAN FORMATTER
+-- "A Drow Elf who is not far off to your east." becomes
+-- "[E ] 2  A Drow Elf" with distance and direction coloured, and a
+-- per-direction summary line follows the last scan line.
+-- ------------------------------------------------------------
+
+local scanDistance = {
+  ["close by"]            = { 1, 255, 80, 80 },
+  ["not far off"]         = { 2, 255, 150, 60 },
+  ["a brief walk away"]   = { 3, 100, 210, 100 },
+  ["rather far off"]      = { 4, 90, 150, 255 },
+  ["in the distance"]     = { 5, 180, 120, 230 },
+  ["almost out of sight"] = { 6, 130, 130, 200 },
+}
+local scanDirShort = {
+  north = "N", south = "S", east = "E", west = "W",
+  northeast = "NE", northwest = "NW", southeast = "SE", southwest = "SW",
+  above = "U", below = "D",
+}
+local scanDirOrder = { "N", "NE", "E", "SE", "S", "SW", "W", "NW", "U", "D" }
+
+function ArjUI:setupScanFormatter()
+  self.scanCounts = {}
+  addTrigger(self, "^You quickly scan the area\\.$", function() ArjUI.scanCounts = {} end)
+  addTrigger(self, "^(.+) who is (close by|not far off|a brief walk away|rather far off|in the distance|almost out of sight) (?:to your (north|south|east|west|northeast|northwest|southeast|southwest)|(above|below)(?: you)?)\\.?$", function()
+    if not (ArjUI.settings and ArjUI.settings.scanFormat) then return end
+    local who, dist = matches[2], matches[3]
+    local dir = (matches[4] and matches[4] ~= "") and matches[4] or matches[5]
+    local d = scanDistance[dist]
+    local short = scanDirShort[dir or ""]
+    if not d or not short then return end
+    local tag = string.format("[%-2s]", short)
+    local text = string.format("%s %d  %s", tag, d[1], who)
+    selectCurrentLine()
+    replace(text)
+    selectSection(0, #tag)
+    setFgColor(150, 200, 255)
+    selectSection(#tag + 1, 1)
+    setFgColor(d[2], d[3], d[4])
+    deselect()
+    local c = ArjUI.scanCounts[short] or { n = 0, nearest = 99 }
+    c.n = c.n + 1
+    if d[1] < c.nearest then c.nearest = d[1] end
+    ArjUI.scanCounts[short] = c
+    if ArjUI.scanTimer then pcall(function() killTimer(ArjUI.scanTimer) end) end
+    ArjUI.scanTimer = tempTimer(0.4, function() if ArjUI then ArjUI:summarizeScan() end end)
+  end)
+end
+
+function ArjUI:summarizeScan()
+  self.scanTimer = nil
+  local parts, total = {}, 0
+  for _, dir in ipairs(scanDirOrder) do
+    local c = self.scanCounts[dir]
+    if c then
+      total = total + c.n
+      table.insert(parts, string.format("<white>%s<dim_gray>:%d (nearest %d)", dir, c.n, c.nearest))
+    end
+  end
+  self.scanCounts = {}
+  if total == 0 then return end
+  self:note(string.format("<cyan>[Scan] <white>%d<dim_gray> seen · %s", total, table.concat(parts, " · ")))
+end
+
+-- ------------------------------------------------------------
+-- ALERT BANNERS
+-- ------------------------------------------------------------
+
+ArjUI.alertPatterns = {
+  { "^Your glowing sanctuary fades\\.$",                         "SANCTUARY DOWN",        "<white:red>" },
+  { "^Your burning hellfire fades\\.$",                          "HELLFIRE DOWN",         "<white:red>" },
+  { "^You feel your skin soften and return to normal\\.$",       "STONE SKIN DOWN",       "<white:dark_red>" },
+  { "^Your heroic urges slowly fade away\\.$",                   "HEROISM DOWN",          "<white:dark_red>" },
+  { "^You feel yourself return to normal as your rage abates\\.$", "RAGE OUT",            "<white:dark_red>" },
+  { "^Your battle frenzy fades\\.$",                             "WAR CRY OUT",           "<white:dark_red>" },
+  { "knocks your weapon from your grasp!",                       "YOU WERE DISARMED",     "<yellow:red>" },
+  { "forces your weapon out of your hands with a fancy disarming maneuver\\.", "YOU WERE DISARMED", "<yellow:red>" },
+  { "^You make a grave error in judgement, and lose control of your weapon\\.", "YOU DROPPED YOUR WEAPON", "<yellow:red>" },
+  { "^You fail miserably in your attempt to disarm",             "DISARM FAILED",         "<white:dark_red>" },
+  { "^You make a great effort, and send ",                       "DISARM SUCCESS",        "<white:dark_green>" },
+  { "^You feel an icy eye watching you\\.$",                     "SOMEONE IS SCRYING YOU", "<white:purple>" },
+  { "^You finish your song\\.$",                                 "SONG FINISHED",         "<white:blue>" },
+  { "^Uh oh\\.\\. how did the song go, anyway\\?$",              "SONG FAILED",           "<white:red>" },
+  { "^You feel your skill in (.+) improving\\.$",                "SKILL UP: %1",          "<black:gold>" },
+  { "^(.+) has set off your frost beacon at (.+)$",              "FROST BEACON: %1 at %2", "<black:cyan>" },
+  { "^There are (.+) tracks going (.+)\\.$",                     "TRACKS: %1 going %2",   "<black:khaki>" },
+}
+
+function ArjUI:setupAlerts()
+  for _, a in ipairs(self.alertPatterns) do
+    local pattern, label, style = a[1], a[2], a[3]
+    addTrigger(self, pattern, function()
+      if not (ArjUI.settings and ArjUI.settings.alerts) then return end
+      local text = label:gsub("%%(%d)", function(i) return matches[tonumber(i) + 1] or "" end)
+      ArjUI:note(string.format("\n%s ══ %s ══", style, text))
+    end)
+  end
+end
+
+-- ------------------------------------------------------------
+-- SHIP PANEL
+-- GMCP Ship.Info / Ship.Contacts when the server sends them, with the
+-- text "Contact listing" output as a fallback. Click the SHIP tab to
+-- send 'look contacts'.
+-- ------------------------------------------------------------
+
+function ArjUI:resetShip()
+  self.state.ship = { info = nil, contacts = nil, textContacts = nil, skills = {} }
+end
+
+function ArjUI:setupShipText()
+  if not self.state.ship then self:resetShip() end
+  local ship = function() return ArjUI.state.ship end
+  addTrigger(self, "^Contact listing\\s+H:\\s*(\\S+)\\s+S:\\s*(\\S+)", function()
+    local s = ship()
+    s.heading, s.speed = matches[2], matches[3]
+    s.textContacts = {}
+    ArjUI:renderShipIfActive()
+  end)
+  addTrigger(self, "^\\[(\\w+)\\]\\s+(.+?)\\s+X:\\s*(-?\\d+)\\s+Y:\\s*(-?\\d+)\\s+R:\\s*(\\S+)\\s+B:\\s*(\\S+)\\s+H:\\s*(\\S+)\\s+S:\\s*(\\S+)\\s*\\|(\\w)(\\w)(.*)$", function()
+    local s = ship()
+    s.textContacts = s.textContacts or {}
+    local side = "other"
+    selectString(matches[1], 1)
+    if isAnsiFgColor(3) then side = "evil" elseif isAnsiFgColor(7) then side = "good" end
+    deselect()
+    table.insert(s.textContacts, {
+      id = matches[2], name = matches[3], x = matches[4], y = matches[5],
+      range = tonumber(matches[6]) or matches[6], bearing = matches[7], heading = matches[8], speed = matches[9],
+      facing = matches[10], pointing = matches[11], sunk = (matches[12] or ""):find("S") ~= nil, side = side,
+    })
+    ArjUI:renderShipIfActive()
+  end)
+  addTrigger(self, "^You board (.+)$", function() ship().name = matches[2]; ship().status = "aboard"; ArjUI:renderShipIfActive() end)
+  addTrigger(self, "^You disembark this ship\\.$", function() ArjUI:resetShip(); ArjUI:renderShipIfActive() end)
+  addTrigger(self, "^Your ship has completed docking procedures\\.$", function() ship().status = "docked"; ArjUI:renderShipIfActive() end)
+  addTrigger(self, "^The first officer reports everything is in order and the ship is ready to go\\.$", function() ship().status = "under way"; ArjUI:renderShipIfActive() end)
+  addTrigger(self, "^Captain:\\s*(\\w+)", function() ship().captain = matches[2]; ArjUI:renderShipIfActive() end)
+  addTrigger(self, "(?:Speed Range:\\s*0-(\\d+)|^This ship can only go from 0 to (\\d+)\\.$)", function()
+    local v = matches[2]
+    if not v or v == "" then v = matches[3] end
+    ship().maxSpeed = v
+    ArjUI:renderShipIfActive()
+  end)
+  addTrigger(self, "^(Deck|Guns|Repair) skill:\\s+(\\d+)", function()
+    local s, name, val = ship(), matches[2], tonumber(matches[3])
+    local prev = s.skills[name]
+    if prev and val > prev then ArjUI:note(string.format("<cyan>[Ship] %s skill +%d (now %d)", name, val - prev, val)) end
+    s.skills[name] = val
+    ArjUI:renderShipIfActive()
+  end)
+  addTrigger(self, "^Locked onto \\[(.+)\\]: (.+)$", function() ship().target = matches[2]; ArjUI:renderShipIfActive() end)
+  addTrigger(self, "^Target Cleared\\.$", function() ship().target = nil; ArjUI:renderShipIfActive() end)
+end
+
+function ArjUI:onShipInfo()
+  if not gmcp or not gmcp.Ship or not gmcp.Ship.Info then return end
+  if not self.state.ship then self:resetShip() end
+  self.state.ship.info = gmcp.Ship.Info
+  self:renderShipIfActive()
+end
+
+function ArjUI:onShipContacts()
+  if not gmcp or not gmcp.Ship or not gmcp.Ship.Contacts then return end
+  if not self.state.ship then self:resetShip() end
+  local c = gmcp.Ship.Contacts
+  if type(c) == "table" and c.contacts then c = c.contacts end
+  self.state.ship.contacts = c
+  self:renderShipIfActive()
+end
+
+function ArjUI:renderShipIfActive()
+  if self.activeTab == "ship" then self:renderShip() end
+end
+
+local function sortedKeys(t)
+  local keys = {}
+  for k in pairs(t) do table.insert(keys, tostring(k)) end
+  table.sort(keys)
+  return keys
+end
+
+local function shipSideColor(contact)
+  local side = tostring(pick(contact, "side", "alignment", "racewar", "faction") or ""):lower()
+  if contact.sunk == true then return "<royal_blue>" end
+  if side:find("evil") then return "<indian_red>" end
+  if side:find("good") then return "<khaki>" end
+  if contact.hostile == true then return "<indian_red>" end
+  return "<light_gray>"
+end
+
+function ArjUI:renderShip()
+  if not self.shipBox then return end
+  local box = self.shipBox
+  box:clear()
+  local s = self.state.ship or {}
+  box:cecho("<dim_gray>── Ship ──\n")
+
+  local info = s.info
+  local shown = false
+  if type(info) == "table" then
+    local name = pick(info, "name", "ship", "shipName")
+    if name then box:cecho(string.format("<white>%s\n", tostring(name))); shown = true end
+    local lineParts = {}
+    local heading = pick(info, "heading", "course")
+    local speed = pick(info, "speed")
+    local maxSpeed = pick(info, "maxSpeed", "max_speed", "speedMax")
+    if heading then table.insert(lineParts, "H:" .. tostring(heading)) end
+    if speed then table.insert(lineParts, "S:" .. tostring(speed) .. (maxSpeed and ("/" .. tostring(maxSpeed)) or "")) end
+    if #lineParts > 0 then box:cecho("<yellow>" .. table.concat(lineParts, "  ") .. "\n"); shown = true end
+    local skip = { name = true, ship = true, shipName = true, heading = true, course = true, speed = true, maxSpeed = true, max_speed = true, speedMax = true }
+    for _, k in ipairs(sortedKeys(info)) do
+      local v = info[k]
+      if not skip[k] and type(v) ~= "table" then
+        box:cecho(string.format("<dim_gray>%s: <light_gray>%s\n", k, tostring(v)))
+        shown = true
+      elseif not skip[k] and type(v) == "table" then
+        local vals = {}
+        for _, kk in ipairs(sortedKeys(v)) do
+          local vv = v[kk]
+          if type(vv) ~= "table" then table.insert(vals, kk .. "=" .. tostring(vv)) end
+        end
+        if #vals > 0 then box:cecho(string.format("<dim_gray>%s: <light_gray>%s\n", k, table.concat(vals, " "))); shown = true end
+      end
+    end
+  end
+  if s.name or s.status or s.captain or s.maxSpeed or s.heading then
+    local bits = {}
+    if s.name then table.insert(bits, "<white>" .. s.name) end
+    if s.status then table.insert(bits, "<cyan>" .. s.status) end
+    if s.captain then table.insert(bits, "<dim_gray>Capt. <light_gray>" .. s.captain) end
+    if s.maxSpeed then table.insert(bits, "<dim_gray>max spd <light_gray>" .. s.maxSpeed) end
+    box:cecho(table.concat(bits, "<dim_gray> · ") .. "\n")
+    if s.heading or s.speed then
+      box:cecho(string.format("<yellow>H:%s  S:%s\n", tostring(s.heading or "?"), tostring(s.speed or "?")))
+    end
+    shown = true
+  end
+  if s.target then box:cecho("<indian_red>Locked on: <white>" .. s.target .. "\n"); shown = true end
+  if next(s.skills or {}) then
+    local parts = {}
+    for _, k in ipairs(sortedKeys(s.skills)) do table.insert(parts, k .. " " .. s.skills[k]) end
+    box:cecho("<dim_gray>Skills: <light_gray>" .. table.concat(parts, "  ") .. "\n")
+    shown = true
+  end
+
+  local contacts = s.contacts
+  if type(contacts) ~= "table" or #contacts == 0 then contacts = s.textContacts end
+  if type(contacts) == "table" and #contacts > 0 then
+    local list = {}
+    for _, c in ipairs(contacts) do if type(c) == "table" then table.insert(list, c) end end
+    table.sort(list, function(a, b)
+      local ra = tonumber(pick(a, "range", "distance", "r")) or 9999
+      local rb = tonumber(pick(b, "range", "distance", "r")) or 9999
+      return ra < rb
+    end)
+    box:cecho(string.format("\n<dim_gray>Contacts (%d)\n", #list))
+    for _, c in ipairs(list) do
+      local id = pick(c, "id", "num", "number")
+      local name = pick(c, "name", "ship") or "?"
+      local color = shipSideColor(c)
+      local bits = {}
+      local b, h, r, sp = pick(c, "bearing", "b"), pick(c, "heading", "h"), pick(c, "range", "distance", "r"), pick(c, "speed", "s")
+      if b then table.insert(bits, "B:" .. tostring(b)) end
+      if h then table.insert(bits, "H:" .. tostring(h)) end
+      if r then table.insert(bits, "R:" .. tostring(r)) end
+      if sp then table.insert(bits, "S:" .. tostring(sp)) end
+      if c.facing and c.pointing then table.insert(bits, "(" .. c.facing .. "|" .. c.pointing .. ")") end
+      if #bits == 0 then
+        for _, k in ipairs(sortedKeys(c)) do
+          if k ~= "name" and k ~= "id" and type(c[k]) ~= "table" then table.insert(bits, k .. "=" .. tostring(c[k])) end
+        end
+      end
+      local tag = (s.target and id and tostring(id) == tostring(s.target)) and "<white>*" or ""
+      box:cecho(string.format("%s%s[%s] %s%s<dim_gray> %s\n", tag, color, tostring(id or "-"), tostring(name), c.sunk and " (sunk)" or "", table.concat(bits, " ")))
+    end
+    shown = true
+  end
+
+  if not shown then
+    box:cecho("<dim_gray>(no ship data)\n\nBoard a ship and click SHIP\nto look at contacts.\n")
+  end
+end
+
+-- ------------------------------------------------------------
+-- NUMPAD MOVEMENT KEYS
+-- 8/2/4/6 = n/s/w/e, 7/9/1/3 = nw/ne/sw/se, - = up, + = down,
+-- 5 = look, / = scan, 0 = flee
+-- ------------------------------------------------------------
+
+ArjUI.keypadMap = {
+  { 56, "north" }, { 50, "south" }, { 52, "west" }, { 54, "east" },
+  { 55, "northwest" }, { 57, "northeast" }, { 49, "southwest" }, { 51, "southeast" },
+  { 45, "up" }, { 43, "down" }, { 53, "look" }, { 47, "scan" }, { 48, "flee" },
+}
+
+function ArjUI:setupKeypad()
+  for _, id in ipairs(self.portKeys or {}) do pcall(function() killKey(id) end) end
+  self.portKeys = {}
+  if not (self.settings and self.settings.keypad) then return end
+  local keypad = (mudlet and mudlet.keymodifier and mudlet.keymodifier.Keypad) or 536870912
+  for _, k in ipairs(self.keypadMap) do
+    local cmd = k[2]
+    local ok, id = pcall(tempKey, keypad, k[1], function() send(cmd) end)
+    if ok and id then table.insert(self.portKeys, id) end
+  end
+end
+
+-- ------------------------------------------------------------
+-- HELP
+-- ------------------------------------------------------------
+
+function ArjUI:showHelp()
+  self:note("<gold>══ Arjinius Client commands ══")
+  self:note("<white>ui on / ui off<dim_gray>        build or hide the interface")
+  self:note("<white>ui debug<dim_gray>              show which GMCP tables have arrived")
+  self:note("<white>ui damage<dim_gray>             session damage report; <white>ui damage reset<dim_gray> clears it")
+  self:note("<white>ui set<dim_gray>                list toggles; <white>ui set <name> on|off<dim_gray> changes one")
+  self:note("<white>mapper<dim_gray>                mapper help")
+  self:note("<dim_gray>Numpad: 8/2/4/6 move, 7/9/1/3 diagonals, - up, + down, 5 look, / scan, 0 flee")
+end
+
+function ArjUI:showSettings()
+  self:note("<gold>══ Toggles (ui set <name> on|off) ══")
+  local desc = {
+    keypad = "numpad movement keys", chatTimestamps = "[hh:mm] on chat lines",
+    damageTracker = "damage counter in the target panel", scanFormat = "aligned, coloured scan output",
+    alerts = "banners for sanc/rage/disarm/scry/skill-up", expTracker = "+exp notices with kills-to-level",
+  }
+  for _, k in ipairs(sortedKeys(self.settingsDefaults)) do
+    local on = self.settings[k]
+    self:note(string.format("%s%-16s<dim_gray> %s  %s", on and "<green>" or "<indian_red>", k, on and "on " or "off", desc[k] or ""))
   end
 end
 
@@ -3143,6 +3761,8 @@ function ArjUI:setupAliases()
   if self.uiOnAlias then pcall(function() killAlias(self.uiOnAlias) end) end
   if self.uiOffAlias then pcall(function() killAlias(self.uiOffAlias) end) end
   if self.debugAlias then pcall(function() killAlias(self.debugAlias) end) end
+  for _, id in ipairs(self.portAliases or {}) do pcall(function() killAlias(id) end) end
+  self.portAliases = {}
   
   -- ui on - reinitialize the UI
   self.uiOnAlias = tempAlias("^ui on$", function()
@@ -3175,9 +3795,27 @@ function ArjUI:setupAliases()
         ArjUI.console:cecho("<cyan>Affects count:<reset> " .. count .. "\n")
       end
       ArjUI.console:cecho("<cyan>initialDataRequested:<reset> " .. tostring(ArjUI.initialDataRequested) .. "\n")
+      ArjUI.console:cecho("<cyan>Ship.Info:<reset> " .. (gmcp and gmcp.Ship and gmcp.Ship.Info and "YES" or "NO") .. "\n")
+      ArjUI.console:cecho("<cyan>Ship.Contacts:<reset> " .. (gmcp and gmcp.Ship and gmcp.Ship.Contacts and "YES" or "NO") .. "\n")
       ArjUI.console:cecho("<gold>═══════════════════════<reset>\n\n")
     end
   end)
+  
+  -- ui help
+  table.insert(self.portAliases, tempAlias("^ui help$", function() ArjUI:showHelp() end))
+  -- ui damage [reset]
+  table.insert(self.portAliases, tempAlias("^ui damage$", function() ArjUI:reportDamage(false) end))
+  table.insert(self.portAliases, tempAlias("^ui damage reset$", function() ArjUI:reportDamage(true) end))
+  -- ui set [<name> on|off]
+  table.insert(self.portAliases, tempAlias("^ui set$", function() ArjUI:showSettings() end))
+  table.insert(self.portAliases, tempAlias("^ui set (\\w+) (on|off)$", function()
+    local key, val = matches[2], matches[3] == "on"
+    if ArjUI:setSetting(key, val) then
+      ArjUI:note(string.format("<cyan>[ArjUI] %s is now %s.", key, val and "on" or "off"))
+    else
+      ArjUI:note("<indian_red>[ArjUI] Unknown toggle '" .. key .. "'. Type 'ui set' to list them.")
+    end
+  end))
 end
 
 -- ============================================================

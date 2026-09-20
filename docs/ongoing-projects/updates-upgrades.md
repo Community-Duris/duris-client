@@ -231,9 +231,20 @@ and was verified to reproduce the hand-assembled XML byte for byte (same CRC).
 - The built `.mpackage` stays committed at the repo root so the install path
   in the README keeps working.
 
+## 3c. Lielz port (2026-09-20, package 1.2.0)
+
+Display-only helpers from the community "lielz scripts" collection were
+folded into `ArjUI` as a "PORTED INTELLIGENCE" section: SHIP tab (text panel
+over `Ship.Info`/`Ship.Contacts` with a `look contacts` text fallback), damage
+counter (`Combat.Update.round` or `[Damage: N]`), exp notices from
+`Char.Vitals.exp`/`tnl`, scan formatter, alert banners, group moves/missing-HP,
+chat timestamps, numpad keys, and a persisted `ui set` toggle table. The
+selection record is `docs/ongoing-projects/lielz-port.md`. F13 is now partly
+done: the data is shown, but nothing is drawn as a radar yet.
+
 ## 4. Next candidates
 
-1. Ship radar panel (F13).
+1. Ship radar drawing (F13): the SHIP tab shows the data; a Geyser radar view is still open.
 2. `presentation`-based chat rendering (F14).
 3. Ask upstream to add `alignment` to `Room.Info.players` (F12).
 4. Use `Room.Info.environment` to tint the room header by terrain.

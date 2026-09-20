@@ -44,9 +44,11 @@ The package is named **Arjinius Client** inside Mudlet. For updates, download th
 | **Character and quests** | HP, mana, movement, progress toward the next level, position, character identity, coins, and active bartender quest details. Non-mana classes show **MP n/a**. |
 | **Zone and wilderness maps** | Zone layouts from the New Duris map API and wilderness maps from GMCP, with zoom controls, room tooltips, and a current-position marker. |
 | **Room awareness** | Clickable exits, distinct closed/locked exit styles, lists of mobs, items, and players, plus NPC annotations showing whom they are fighting. |
-| **Combat and groups** | Target health and position, a prompt-derived tank display, affects, group size/capacity, and dimmed **AWAY** markers for members outside your room. |
-| **Chat that stays organized** | **ALL / TELLS / NCHAT / ROOM / GUILD / GROUP**, with individual tell windows, contact history for the current session, and alignment-colored nchat/jchat senders. |
-| **Useful details nearby** | Inventory, equipment, and who-list panels; context menus for common actions; in-game time; links to the world map and current zone's wiki page. |
+| **Combat and groups** | Target health and position, a prompt-derived tank display, affects, a per-fight damage counter, group size/capacity, moves per member, the most hurt member highlighted, and dimmed **AWAY** markers for members outside your room. |
+| **Chat that stays organized** | **ALL / TELLS / NCHAT / ROOM / GUILD / GROUP**, with timestamps, individual tell windows, contact history for the current session, and alignment-colored nchat/jchat senders. |
+| **Useful details nearby** | Inventory, equipment, who-list, and ship panels; context menus for common actions; in-game time; links to the world map and current zone's wiki page. |
+| **Text intelligence** | Aligned, color-coded `scan` output with a per-direction summary; `+exp` notices with a kills-to-level estimate; banners when sanctuary, rage, war cry, or stone skin drop, when you are disarmed or scryed, and when a skill improves. |
+| **Numpad movement** | 8/2/4/6 move, 7/9/1/3 diagonals, `-` up, `+` down, 5 look, `/` scan, 0 flee. Turn off with `ui set keypad off`. |
 
 Guild `gcc` messages route to **GUILD**, group `gsay` to **GROUP**, and `jchat` to **NCHAT**. `petition` and `wizmsg` appear in **ALL** with distinct colors. Tell windows and their history are session-only.
 
@@ -58,7 +60,10 @@ Type these into the Mudlet command input:
 | --- | --- |
 | `ui on` | Initialize or rebuild the interface. |
 | `ui off` | Hide the interface and restore Mudlet's main console and command line. |
+| `ui help` | List commands and numpad keys. |
 | `ui debug` | Show which core GMCP data tables have arrived. |
+| `ui damage` | Session damage report (total, hits, damage per second, current fight). `ui damage reset` clears it. Clicking the **DMG** counter in the target panel shows the same report. |
+| `ui set` | List the toggles below. `ui set <name> on` or `off` changes one and remembers it. |
 | `mapper` | Show mapper help. |
 | `mapper on` / `mapper off` | Enable or pause mapper updates. |
 | `mapper status` | Show the current map mode, room, zone, and cache statistics. |
@@ -67,7 +72,9 @@ Type these into the Mudlet command input:
 | `mapper size 14` | Set zone room size; accepts integers from **8–20**. |
 | `/mapreload` | An additional shortcut to clear the map cache. |
 
-Use the map's **+ / −** controls to zoom. Click the active **STATS**, **INV**, **EQ**, or **WHO** tab to send `stat`, `inv`, `eq`, or `who` and refresh the corresponding information.
+Toggles for `ui set`: `keypad` (numpad keys), `chatTimestamps`, `damageTracker`, `scanFormat`, `alerts`, and `expTracker`. All default to on and are saved to `arjui_settings.json` in your Mudlet profile folder.
+
+Use the map's **+ / −** controls to zoom. Click the active **STATS**, **INV**, **EQ**, **WHO**, or **SHIP** tab to send `stat`, `inv`, `eq`, `who`, or `look contacts` and refresh the corresponding information.
 
 ## How it works
 
@@ -113,7 +120,7 @@ flowchart TB
     linkStyle default stroke:#8c6e46,stroke-width:1.5px
 ```
 
-Most live panels use GMCP. Inventory, equipment, and who lists capture game text; tank and time displays also depend on text triggers. Zone layouts come from `https://www.newduris.com/api/wiki/zones/{zoneId}/map-data` and are cached in memory. The mapper listens to `Room.Info` and `Room.Map` directly.
+Most live panels use GMCP. Inventory, equipment, and who lists capture game text; tank and time displays also depend on text triggers. The damage counter reads `Combat.Update.round` when the server sends it and falls back to `[Damage: N]` display lines. Several display helpers were adapted from the community "lielz scripts" collection; see [`docs/ongoing-projects/lielz-port.md`](docs/ongoing-projects/lielz-port.md) for what was taken and what was left out. Zone layouts come from `https://www.newduris.com/api/wiki/zones/{zoneId}/map-data` and are cached in memory. The mapper listens to `Room.Info` and `Room.Map` directly.
 
 ## Troubleshooting and current limits
 
@@ -122,7 +129,7 @@ Most live panels use GMCP. Inventory, equipment, and who lists capture game text
 - **Missing tank, inventory, equipment, who, or time information:** these displays depend on recognized text and prompt formats. Custom prompts or changed server output can affect capture even when GMCP panels work.
 - **Need to restore the main console:** use `ui off`; `ui on` builds the interface again.
 
-Ship radar, quest-map rendering, and the server's structured chat color runs are not implemented. Alignment coloring for other players in the room is limited by the fields the server supplies. The [server study and implementation log](docs/ongoing-projects/updates-upgrades.md) records the protocol details, completed work, and remaining candidates.
+The **SHIP** tab lists contacts sorted by range and colored by side when the server sends `Ship.Info`/`Ship.Contacts` or when you look at contacts; it is a text panel, not a drawn radar. Quest-map rendering and the server's structured chat color runs are not implemented. Alignment coloring for other players in the room is limited by the fields the server supplies. The [server study and implementation log](docs/ongoing-projects/updates-upgrades.md) records the protocol details, completed work, and remaining candidates.
 
 ## Build and contribute
 
