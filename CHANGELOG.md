@@ -1,6 +1,13 @@
 # Changelog
 
-Notable changes to the Duris Client Mudlet package. Each version heading must match `VERSION`; the release workflow copies that section into the GitHub Release notes.
+Notable changes to the Duris Client Mudlet package. Versions follow [Semantic Versioning](https://semver.org) (`MAJOR.MINOR.PATCH`); see [docs/RELEASING.md](docs/RELEASING.md) for what each part means here. Each version heading must match `VERSION`; the release workflow copies that section into the GitHub Release notes.
+
+## 1.1.0 - 2026-09-20
+
+Same package as 1.1, re-released to adopt semantic versioning.
+
+- Versions are now `MAJOR.MINOR.PATCH`. The build and the release workflow reject anything else.
+- `build.py` creates the output directory when it is missing.
 
 ## 1.1 - 2026-09-20
 

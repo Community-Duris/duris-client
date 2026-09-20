@@ -6,7 +6,7 @@
     python3 build.py -o path    # build somewhere else
 
 Layout:
-    VERSION                 single source of truth for the package version
+    VERSION                 single source of truth for the package version (semver: MAJOR.MINOR.PATCH)
     src/package.xml         Mudlet XML skeleton; each <script> body is a
                             @@SCRIPT:<Name>@@ placeholder
     src/scripts/<Name>.lua  script bodies, one per <Script> element
@@ -41,8 +41,8 @@ def read(path, mode="r"):
 
 def version():
     v = read(os.path.join(ROOT, "VERSION")).strip()
-    if not re.fullmatch(r"\d+(\.\d+)*", v):
-        sys.exit(f"VERSION must look like 1.2.3, got {v!r}")
+    if not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", v):
+        sys.exit(f"VERSION must be semantic (MAJOR.MINOR.PATCH, e.g. 1.2.0), got {v!r}")
     return v
 
 

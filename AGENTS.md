@@ -18,9 +18,9 @@ A **Mudlet client package** (UI only) for the MUD *New Duris*. Upstream: https:/
 
 ## Working on the package
 - Edit `src/`, then run `python3 build.py`. Commit the rebuilt `.mpackage` together with the source change.
-- Bump `VERSION` when changing the package. Do not edit `version` in `src/config.lua` or `ArjUI.VERSION` by hand.
+- Bump `VERSION` (semver `MAJOR.MINOR.PATCH`; rules in `docs/RELEASING.md`) when changing the package. Do not edit `version` in `src/config.lua` or `ArjUI.VERSION` by hand.
 - Add a `## <VERSION> - <date>` section to `CHANGELOG.md` for each version.
-- Releases: push a tag `v<VERSION>` and `.github/workflows/release.yml` builds and publishes the GitHub Release. Steps in `docs/RELEASING.md`.
+- Releases: push a tag `v<VERSION>` (e.g. `v1.2.0`) and `.github/workflows/release.yml` builds and publishes the GitHub Release. Steps in `docs/RELEASING.md`.
 - Keep XML well-formed; the build validates it. Lua gets XML-escaped automatically, so write plain Lua.
 - Requires **Mudlet 4.19.1+** and **GMCP**. Use Mudlet/Geyser APIs; do not introduce external Lua deps.
 - Server ground truth for GMCP field names is documented in `docs/ongoing-projects/updates-upgrades.md`.

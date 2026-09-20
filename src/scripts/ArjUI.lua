@@ -3,7 +3,7 @@
 -- Dark Fantasy Aesthetic
 
 ArjUI = ArjUI or {}
-ArjUI.VERSION = "1.1"
+ArjUI.VERSION = "1.1.0"
 ArjUI.eventHandlers = ArjUI.eventHandlers or {}
 ArjUI.playerName = ArjUI.playerName or nil
 ArjUI.captureTriggers = ArjUI.captureTriggers or {}

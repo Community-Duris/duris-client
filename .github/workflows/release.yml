@@ -22,6 +22,10 @@ jobs:
           set -e
           VERSION="$(tr -d '[:space:]' < VERSION)"
           TAG="${GITHUB_REF_NAME#v}"
+          if ! printf '%s' "$TAG" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
+            echo "::error::Tag $GITHUB_REF_NAME is not vMAJOR.MINOR.PATCH (semver)."
+            exit 1
+          fi
           if [ "$VERSION" != "$TAG" ]; then
             echo "::error::Tag v$TAG does not match VERSION ($VERSION). Bump VERSION, rebuild, commit, then re-tag."
             exit 1
