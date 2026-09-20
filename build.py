@@ -126,6 +126,7 @@ def main():
     xml = build_xml(v)
     cfg = build_config(v)
 
+    os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     tmp = args.output + ".tmp"
     with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_STORED) as z:
         z.writestr(f"{PACKAGE_NAME}.xml", xml.encode("utf-8"))
