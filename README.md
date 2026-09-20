@@ -21,8 +21,6 @@
 
 A custom [Mudlet](https://www.mudlet.org/) interface for [New Duris](https://www.newduris.com/), with a bronze-and-charcoal frame, live character information, integrated maps, and organized chat. Its three-column layout keeps the game console central while room, group, and combat details stay within reach.
 
-This is a **client-side UI package**. Clickable controls send game commands you choose; the package does not automate playing your character or change the game's mechanics.
-
 **[Install](#install)** · **[Features](#features)** · **[Commands](#commands)** · **[How it works](#how-it-works)** · **[Build and contribute](#build-and-contribute)**
 
 ## Install
@@ -159,7 +157,7 @@ python3 build.py -o /tmp/duris-client.mpackage
 | [`CHANGELOG.md`](CHANGELOG.md) | Release notes per version; the release workflow reads it. |
 | [`.github/workflows/`](.github/workflows/) | CI build on every push; tag `v*` publishes a GitHub Release. See [`docs/RELEASING.md`](docs/RELEASING.md). |
 
-When changing the package, bump `VERSION` (semantic versioning, see [`docs/RELEASING.md`](docs/RELEASING.md)), rebuild, and include the generated `.mpackage` with the source change. Let the build insert version strings; do not hand-edit the archive. Keep contributions within the client UI scope, use Mudlet/Geyser APIs without external Lua dependencies, and preserve the dark fantasy style and percentage-based layout.
+When changing the package, bump `VERSION` (semantic versioning, see [`docs/RELEASING.md`](docs/RELEASING.md)), rebuild, and include the generated `.mpackage` with the source change. Let the build insert version strings; do not hand-edit the archive. Use Mudlet/Geyser APIs without external Lua dependencies, and preserve the dark fantasy style and percentage-based layout.
 
 **Validation is limited:** `--check` checks Lua syntax only and skips that check with a warning if `luac` is absent. A full build also validates the assembled XML. Neither verifies runtime behavior; import the package into Mudlet to check layout, GMCP updates, chat, maps, controls, and reconnect behavior. No automated runtime test suite exists in this repository.
 

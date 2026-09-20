@@ -11,7 +11,7 @@ This package replaces the default Mudlet layout with a structured interface that
 • Clickable room exits, mobs, items, and players
 • Visual indicators for targets, tanks, affects, and positioning
 
-The Arjinius Client is intended for players who want a more modern, informative client experience without changing core gameplay.
+The Arjinius Client is intended for players who want a more modern, informative client experience.
 
 Requirements:
 • Mudlet 4.19.1 or newer
@@ -21,7 +21,6 @@ Installation:
 • Import this package using Mudlet’s Package Manager
 • Reload or reconnect after installation
 
-This is a client-side UI only. It does not automate gameplay or provide unfair advantages.
 ]]
 version = [[1.1]]
 created = "2026-02-02T22:03:46-06:00"

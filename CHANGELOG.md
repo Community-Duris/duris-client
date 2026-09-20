@@ -2,6 +2,10 @@
 
 Notable changes to the Duris Client Mudlet package. Versions follow [Semantic Versioning](https://semver.org) (`MAJOR.MINOR.PATCH`); see [docs/RELEASING.md](docs/RELEASING.md) for what each part means here. Each version heading must match `VERSION`; the release workflow copies that section into the GitHub Release notes.
 
+## 1.2.1 - 2026-09-20
+
+- Removed the "client-side UI only, no automation" scope statements from the package description, README, and contributor guide. No code changes.
+
 ## 1.2.0 - 2026-09-20
 
 Display helpers ported from the community "lielz scripts" collection (`docs/archive/lielz_scripts_04-2024.mpackage`). Everything is client-side display; no gameplay automation was carried over. Details in `docs/ongoing-projects/lielz-port.md`.

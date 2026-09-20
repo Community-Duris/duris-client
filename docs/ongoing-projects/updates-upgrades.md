@@ -206,7 +206,7 @@ Notes from implementation:
 - `Quest.Status.remaining` is the number of bartender quests the player may
   still take today (`sql_world_quest_can_do_another`), not a timer. The
   STATS line says "(N more today)".
-- `config.lua` uses CRLF line endings. Keep them when editing.
+- `config.lua` uses LF line endings.
 - The `<Script>` element in the XML uses `isActive="yes" isFolder="no"`, not
   `"1"`/`"0"`. Any re-embedding script must match that.
 - Group members with `isNpc=true` get a trailing `*`; members with

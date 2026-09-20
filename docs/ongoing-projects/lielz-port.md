@@ -5,9 +5,9 @@ script collection for Duris built up between 2015 and April 2024 (roughly 340
 triggers, 1,080 aliases, 200 keys, 17 timers, 17 scripts). This records what
 was carried into the package in 1.2.0, what was left out, and why.
 
-The package's rule (`AGENTS.md`) is client-side display only: no gameplay
-automation, no bots, nothing that acts for the player. Most of the archive is
-automation, so most of it stays in the archive.
+This first pass took only display helpers. The automation in the archive
+was left where it is for now; the list below is a starting point if any of
+it is wanted later.
 
 ## Ported (display only)
 
@@ -30,7 +30,7 @@ automation, so most of it stays in the archive.
   Botting, autoassist, Traps ("order followers kill"), Spam Timer, Scan
   Timer, Score Timer, Skill Practice timers, Roller (auto-rerolls stats),
   Exp gained looting, Pick up ore, Wands, Vit/Virtue casting, potion and
-  corpse macros, Directions speedwalks. All act for the player.
+  corpse macros, Directions speedwalks. Not ported in this pass.
 - **Channel broadcasts**: scan results, tracks, spell hits, ID strings, epic
   zone completions and arti lists were sent to `acc`/`gcc`. Anything that
   talks on a channel is out.

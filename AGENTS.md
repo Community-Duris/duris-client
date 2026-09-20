@@ -3,7 +3,7 @@
 Guidance for AI agents working in this repo. `CLAUDE.md` and `GEMINI.md` are symlinks to this file.
 
 ## What this is
-A **Mudlet client package** (UI only) for the MUD *New Duris*. Upstream: https://github.com/Community-Duris/duris-client (originally by Arjinius).
+A **Mudlet client package** for the MUD *New Duris*. Upstream: https://github.com/Community-Duris/duris-client (originally by Arjinius).
 
 ## Layout
 - `src/` — **the source of truth.**
@@ -26,7 +26,6 @@ A **Mudlet client package** (UI only) for the MUD *New Duris*. Upstream: https:/
 - Server ground truth for GMCP field names is documented in `docs/ongoing-projects/updates-upgrades.md`.
 
 ## Constraints
-- Client-side UI only. Never add gameplay automation, bots, or anything that gives unfair advantage.
 - Keep the dark-fantasy aesthetic and percentage-based scaling consistent.
 - No runtime tests exist; `build.py --check` is syntax only. Verify behaviour by importing the package into Mudlet.
 
